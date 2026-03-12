@@ -2,19 +2,24 @@ ARG BASE_IMAGE=ghcr.io/coollabsio/openclaw-base:latest
 
 FROM ${BASE_IMAGE}
 
-ENV NODE_ENV=production
+# Install additional system packages at build time (optional).
+# Example: docker build --build-arg OPENCLAW_DOCKER_APT_PACKAGES="ffmpeg python3" .
+ARG OPENCLAW_DOCKER_APT_PACKAGES=""
+RUN if [ -n "$OPENCLAW_DOCKER_APT_PACKAGES" ]; then \
+      apt-get update \
+      && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        $OPENCLAW_DOCKER_APT_PACKAGES \
+      && rm -rf /var/lib/apt/lists/*; \
+    fi
 
-RUN apt-get update \
-  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    nginx \
-    apache2-utils \
-  && rm -rf /var/lib/apt/lists/*
-
-# Remove default nginx site
-RUN rm -f /etc/nginx/sites-enabled/default
-
-COPY scripts/ /app/scripts/
+COPY --chown=openclaw:openclaw scripts/ /app/scripts/
 RUN chmod +x /app/scripts/*.sh
+
+# Pre-create /data directory structure with correct ownership.
+# Docker named volumes inherit this ownership on first mount.
+RUN mkdir -p /data/npm-global/bin /data/uv/tools/bin /data/uv/cache /data/go/bin \
+    /data/.openclaw/agents/main/sessions /data/.openclaw/credentials /data/workspace \
+  && chown -R openclaw:openclaw /data
 
 ENV NPM_CONFIG_PREFIX="/data/npm-global" \
     UV_TOOL_DIR="/data/uv/tools" \
@@ -22,10 +27,15 @@ ENV NPM_CONFIG_PREFIX="/data/npm-global" \
     GOPATH="/data/go" \
     PATH="/data/npm-global/bin:/data/uv/tools/bin:/data/go/bin:${PATH}"
 
-ENV PORT=8080
-EXPOSE 8080
+ENV NODE_ENV=production \
+    HOME="/data"
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:${PORT:-8080}/healthz || exit 1
+EXPOSE 7889
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD node -e "fetch('http://127.0.0.1:7889/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+# Security: run as non-root user (uid 1000)
+USER openclaw
 
 ENTRYPOINT ["/app/scripts/entrypoint.sh"]

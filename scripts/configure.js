@@ -77,7 +77,7 @@ ensure(config, "gateway");
 if (process.env.OPENCLAW_GATEWAY_PORT) {
   config.gateway.port = parseInt(process.env.OPENCLAW_GATEWAY_PORT, 10);
 } else if (!config.gateway.port) {
-  config.gateway.port = 18789;
+  config.gateway.port = 7889;
 }
 if (!config.gateway.mode) {
   config.gateway.mode = "local";
@@ -102,7 +102,7 @@ if (config.gateway.controlUi.enabled === undefined) {
 
 // Bind address (all gateway config comes from openclaw.json; "gateway run" reads it)
 if (config.gateway.bind === undefined) {
-  config.gateway.bind = process.env.OPENCLAW_GATEWAY_BIND || "loopback";
+  config.gateway.bind = process.env.OPENCLAW_GATEWAY_BIND || "lan";
 }
 
 // ── Agents defaults ─────────────────────────────────────────────────────────

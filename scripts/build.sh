@@ -5,15 +5,15 @@
 #   ./scripts/build.sh                  # build both base + final
 #   ./scripts/build.sh base             # build base only
 #   ./scripts/build.sh final            # build final only (requires base)
-#   ./scripts/build.sh browser          # build browser sidecar only
 #   OPENCLAW_GIT_REF=v2026.1.29 ./scripts/build.sh  # pin to a specific version
+#   OPENCLAW_DOCKER_APT_PACKAGES="ffmpeg" ./scripts/build.sh  # extra packages
 
 set -euo pipefail
 
 OPENCLAW_GIT_REF="${OPENCLAW_GIT_REF:-main}"
+OPENCLAW_DOCKER_APT_PACKAGES="${OPENCLAW_DOCKER_APT_PACKAGES:-}"
 BASE_TAG="openclaw-base:local"
 FINAL_TAG="openclaw:local"
-BROWSER_TAG="openclaw-browser:local"
 TARGET="${1:-all}"
 
 build_base() {
@@ -31,18 +31,10 @@ build_final() {
   docker build \
     -f Dockerfile \
     --build-arg "BASE_IMAGE=${BASE_TAG}" \
+    --build-arg "OPENCLAW_DOCKER_APT_PACKAGES=${OPENCLAW_DOCKER_APT_PACKAGES}" \
     -t "${FINAL_TAG}" \
     .
   echo "==> Final image built: ${FINAL_TAG}"
-}
-
-build_browser() {
-  echo "==> Building browser sidecar image..."
-  docker build \
-    -f Dockerfile.browser \
-    -t "${BROWSER_TAG}" \
-    .
-  echo "==> Browser image built: ${BROWSER_TAG}"
 }
 
 case "${TARGET}" in
@@ -52,20 +44,16 @@ case "${TARGET}" in
   final)
     build_final
     ;;
-  browser)
-    build_browser
-    ;;
   all)
     build_base
     build_final
-    build_browser
     ;;
   *)
-    echo "Usage: $0 [base|final|browser|all]"
+    echo "Usage: $0 [base|final|all]"
     exit 1
     ;;
 esac
 
 echo ""
 echo "Done. Run with:"
-echo "  docker run -e OPENCLAW_GATEWAY_TOKEN=\$(openssl rand -hex 32) -e ANTHROPIC_API_KEY=sk-... -e AUTH_PASSWORD=secret -p 8080:8080 ${FINAL_TAG}"
+echo "  docker run -e OPENCLAW_GATEWAY_TOKEN=\$(openssl rand -hex 32) -e ANTHROPIC_API_KEY=sk-... -p 7889:7889 ${FINAL_TAG}"
