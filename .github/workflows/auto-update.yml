@@ -24,8 +24,11 @@ on:
 env:
   GITHUB_REGISTRY: ghcr.io
   DOCKER_REGISTRY: docker.io
-  IMAGE_NAME: botdockai/openclaw
-  BASE_IMAGE_NAME: botdockai/openclaw-base
+  # ghcr.io uses GitHub org name, docker.io uses Docker Hub username
+  GHCR_IMAGE: botdock-ai/openclaw
+  GHCR_BASE_IMAGE: botdock-ai/openclaw-base
+  DOCKER_IMAGE: botdockai/openclaw
+  DOCKER_BASE_IMAGE: botdockai/openclaw-base
 
 jobs:
   check-release:
@@ -60,17 +63,17 @@ jobs:
         id: check-image
         run: |
           VERSION="${{ steps.openclaw-release.outputs.version }}"
-          GHCR_IMAGE="${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}"
+          GHCR_FULL="${{ env.GITHUB_REGISTRY }}/${{ env.GHCR_IMAGE }}"
           FORCE_REBUILD="${{ github.event.inputs.force_rebuild }}"
 
           if [ "$FORCE_REBUILD" = "true" ]; then
             echo "Force rebuild enabled, skipping existence check"
             echo "exists=false" >> $GITHUB_OUTPUT
-          elif docker manifest inspect "${GHCR_IMAGE}:${VERSION}" > /dev/null 2>&1; then
-            echo "Image ${GHCR_IMAGE}:${VERSION} already exists"
+          elif docker manifest inspect "${GHCR_FULL}:${VERSION}" > /dev/null 2>&1; then
+            echo "Image ${GHCR_FULL}:${VERSION} already exists"
             echo "exists=true" >> $GITHUB_OUTPUT
           else
-            echo "Image ${GHCR_IMAGE}:${VERSION} does not exist, will build"
+            echo "Image ${GHCR_FULL}:${VERSION} does not exist, will build"
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
@@ -118,8 +121,8 @@ jobs:
           build-args: |
             OPENCLAW_GIT_REF=v${{ needs.check-release.outputs.version }}
           tags: |
-            ${{ env.DOCKER_REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ needs.check-release.outputs.version }}-${{ matrix.arch }}
-            ${{ env.GITHUB_REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ needs.check-release.outputs.version }}-${{ matrix.arch }}
+            ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_BASE_IMAGE }}:${{ needs.check-release.outputs.version }}-${{ matrix.arch }}
+            ${{ env.GITHUB_REGISTRY }}/${{ env.GHCR_BASE_IMAGE }}:${{ needs.check-release.outputs.version }}-${{ matrix.arch }}
           cache-from: type=gha,scope=base-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=base-${{ matrix.arch }}
 
@@ -150,7 +153,7 @@ jobs:
       - name: Create & publish base manifest on ${{ env.GITHUB_REGISTRY }}
         run: |
           VERSION="${{ needs.check-release.outputs.version }}"
-          BASE="${{ env.GITHUB_REGISTRY }}/${{ env.BASE_IMAGE_NAME }}"
+          BASE="${{ env.GITHUB_REGISTRY }}/${{ env.GHCR_BASE_IMAGE }}"
 
           TAGS="-t ${BASE}:${VERSION}"
           if [ "${{ github.event.inputs.skip_latest_tag }}" != "true" ]; then
@@ -165,7 +168,7 @@ jobs:
       - name: Create & publish base manifest on ${{ env.DOCKER_REGISTRY }}
         run: |
           VERSION="${{ needs.check-release.outputs.version }}"
-          BASE="${{ env.DOCKER_REGISTRY }}/${{ env.BASE_IMAGE_NAME }}"
+          BASE="${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_BASE_IMAGE }}"
 
           TAGS="-t ${BASE}:${VERSION}"
           if [ "${{ github.event.inputs.skip_latest_tag }}" != "true" ]; then
@@ -219,10 +222,10 @@ jobs:
           platforms: linux/${{ matrix.arch }}
           push: true
           build-args: |
-            BASE_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${{ needs.check-release.outputs.version }}-${{ matrix.arch }}
+            BASE_IMAGE=${{ env.GITHUB_REGISTRY }}/${{ env.GHCR_BASE_IMAGE }}:${{ needs.check-release.outputs.version }}-${{ matrix.arch }}
           tags: |
-            ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.check-release.outputs.version }}-${{ matrix.arch }}
-            ${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.check-release.outputs.version }}-${{ matrix.arch }}
+            ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE }}:${{ needs.check-release.outputs.version }}-${{ matrix.arch }}
+            ${{ env.GITHUB_REGISTRY }}/${{ env.GHCR_IMAGE }}:${{ needs.check-release.outputs.version }}-${{ matrix.arch }}
           cache-from: type=gha,scope=final-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=final-${{ matrix.arch }}
 
@@ -253,7 +256,7 @@ jobs:
       - name: Create & publish final manifest on ${{ env.GITHUB_REGISTRY }}
         run: |
           VERSION="${{ needs.check-release.outputs.version }}"
-          IMAGE="${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}"
+          IMAGE="${{ env.GITHUB_REGISTRY }}/${{ env.GHCR_IMAGE }}"
 
           TAGS="-t ${IMAGE}:${VERSION}"
           if [ "${{ github.event.inputs.skip_latest_tag }}" != "true" ]; then
@@ -268,7 +271,7 @@ jobs:
       - name: Create & publish final manifest on ${{ env.DOCKER_REGISTRY }}
         run: |
           VERSION="${{ needs.check-release.outputs.version }}"
-          IMAGE="${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}"
+          IMAGE="${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE }}"
 
           TAGS="-t ${IMAGE}:${VERSION}"
           if [ "${{ github.event.inputs.skip_latest_tag }}" != "true" ]; then
@@ -286,7 +289,7 @@ jobs:
           echo "## Openclaw ${VERSION}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Successfully built and published:" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ env.GITHUB_REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${VERSION}\` (base)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ env.GITHUB_REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}\` (final)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ env.DOCKER_REGISTRY }}/${{ env.BASE_IMAGE_NAME }}:${VERSION}\` (base)" >> $GITHUB_STEP_SUMMARY
-          echo "- \`${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}\` (final)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.GITHUB_REGISTRY }}/${{ env.GHCR_BASE_IMAGE }}:${VERSION}\` (base)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.GITHUB_REGISTRY }}/${{ env.GHCR_IMAGE }}:${VERSION}\` (final)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_BASE_IMAGE }}:${VERSION}\` (base)" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE }}:${VERSION}\` (final)" >> $GITHUB_STEP_SUMMARY
