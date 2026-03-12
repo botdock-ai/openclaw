@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=ghcr.io/coollabsio/openclaw-base:latest
+ARG BASE_IMAGE=ghcr.io/botdockai/openclaw-base:latest
 
 FROM ${BASE_IMAGE}
 

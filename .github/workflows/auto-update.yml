@@ -24,27 +24,35 @@ on:
 env:
   GITHUB_REGISTRY: ghcr.io
   DOCKER_REGISTRY: docker.io
-  IMAGE_NAME: coollabsio/openclaw
-  BASE_IMAGE_NAME: coollabsio/openclaw-base
+  IMAGE_NAME: botdockai/openclaw
+  BASE_IMAGE_NAME: botdockai/openclaw-base
 
 jobs:
   check-release:
     runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.openclaw-release.outputs.version }}
-      should_build: ${{ steps.check-image.outputs.exists == 'false' }}
+      should_build: ${{ steps.openclaw-release.outputs.version != '' && steps.check-image.outputs.exists == 'false' }}
     steps:
-      - name: Get latest Openclaw release
+      - name: Get latest stable Openclaw release
         id: openclaw-release
         run: |
           if [ -n "${{ github.event.inputs.version }}" ]; then
             VERSION="${{ github.event.inputs.version }}"
             echo "Using manually specified version: $VERSION"
           else
-            LATEST_RELEASE=$(curl -s https://api.github.com/repos/openclaw/openclaw/releases/latest | jq -r '.tag_name')
+            # /releases/latest already excludes GitHub pre-releases.
+            # Additionally filter out tags containing beta/rc/alpha in the name.
+            LATEST_RELEASE=$(curl -s https://api.github.com/repos/openclaw/openclaw/releases \
+              | jq -r '[.[] | select(.prerelease == false and .draft == false) | select(.tag_name | test("beta|rc|alpha|dev|canary"; "i") | not)][0].tag_name')
+            if [ -z "$LATEST_RELEASE" ] || [ "$LATEST_RELEASE" = "null" ]; then
+              echo "No stable release found"
+              echo "version=" >> $GITHUB_OUTPUT
+              exit 0
+            fi
             # Strip leading 'v' if present (openclaw uses v2026.1.29 format)
             VERSION=$(echo "$LATEST_RELEASE" | sed 's/^v//')
-            echo "Latest Openclaw release: $VERSION"
+            echo "Latest stable Openclaw release: $VERSION"
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
