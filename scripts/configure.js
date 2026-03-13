@@ -104,6 +104,12 @@ if (config.gateway.controlUi.enabled === undefined) {
 // Overrides any persisted config or doctor --fix defaults.
 config.gateway.bind = "lan";
 
+// Trust reverse proxies (Coolify/Traefik, nginx, etc.) on Docker private networks.
+// Without this, gateway rejects proxied WebSocket connections (code=4008).
+if (!config.gateway.trustedProxies) {
+  config.gateway.trustedProxies = ["172.16.0.0/12", "10.0.0.0/8", "192.168.0.0/16"];
+}
+
 // ── Agents defaults ─────────────────────────────────────────────────────────
 
 ensure(config, "agents", "defaults");
