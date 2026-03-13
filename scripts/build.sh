@@ -56,4 +56,4 @@ esac
 
 echo ""
 echo "Done. Run with:"
-echo "  docker run -e OPENCLAW_GATEWAY_TOKEN=\$(openssl rand -hex 32) -e ANTHROPIC_API_KEY=sk-... -p 7889:7889 ${FINAL_TAG}"
+echo "  docker run -e OPENCLAW_GATEWAY_TOKEN=\$(openssl rand -hex 32) -e ANTHROPIC_API_KEY=sk-... -p 8080:8080 ${FINAL_TAG}"

@@ -3,7 +3,7 @@ set -e
 
 STATE_DIR="${OPENCLAW_STATE_DIR:-/data/.openclaw}"
 WORKSPACE_DIR="${OPENCLAW_WORKSPACE_DIR:-/data/workspace}"
-GATEWAY_PORT="${OPENCLAW_GATEWAY_PORT:-7889}"
+GATEWAY_PORT="${OPENCLAW_GATEWAY_PORT:-8080}"
 
 echo "[entrypoint] state dir: $STATE_DIR"
 echo "[entrypoint] workspace dir: $WORKSPACE_DIR"

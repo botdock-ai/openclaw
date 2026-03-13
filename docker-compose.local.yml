@@ -2,7 +2,7 @@ services:
   openclaw:
     image: openclaw:local
     ports:
-      - "7889:7889"
+      - "8080:8080"
     environment:
       # Provider (at least one required)
       - OPENCODE_API_KEY=${OPENCODE_API_KEY}

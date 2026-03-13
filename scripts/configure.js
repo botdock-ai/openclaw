@@ -77,7 +77,7 @@ ensure(config, "gateway");
 if (process.env.OPENCLAW_GATEWAY_PORT) {
   config.gateway.port = parseInt(process.env.OPENCLAW_GATEWAY_PORT, 10);
 } else if (!config.gateway.port) {
-  config.gateway.port = 7889;
+  config.gateway.port = 8080;
 }
 if (!config.gateway.mode) {
   config.gateway.mode = "local";
@@ -100,12 +100,9 @@ if (config.gateway.controlUi.enabled === undefined) {
   config.gateway.controlUi.enabled = true;
 }
 
-// Bind address (all gateway config comes from openclaw.json; "gateway run" reads it)
-if (process.env.OPENCLAW_GATEWAY_BIND) {
-  config.gateway.bind = process.env.OPENCLAW_GATEWAY_BIND;
-} else if (config.gateway.bind === undefined) {
-  config.gateway.bind = "lan";
-}
+// Bind address: always "lan" (0.0.0.0) — required for Docker networking.
+// Overrides any persisted config or doctor --fix defaults.
+config.gateway.bind = "lan";
 
 // ── Agents defaults ─────────────────────────────────────────────────────────
 
