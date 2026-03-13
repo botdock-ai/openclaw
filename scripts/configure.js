@@ -101,8 +101,10 @@ if (config.gateway.controlUi.enabled === undefined) {
 }
 
 // Bind address (all gateway config comes from openclaw.json; "gateway run" reads it)
-if (config.gateway.bind === undefined) {
-  config.gateway.bind = process.env.OPENCLAW_GATEWAY_BIND || "lan";
+if (process.env.OPENCLAW_GATEWAY_BIND) {
+  config.gateway.bind = process.env.OPENCLAW_GATEWAY_BIND;
+} else if (config.gateway.bind === undefined) {
+  config.gateway.bind = "lan";
 }
 
 // ── Agents defaults ─────────────────────────────────────────────────────────
