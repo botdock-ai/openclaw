@@ -22,23 +22,6 @@ if [ -z "${OPENCLAW_GATEWAY_TOKEN:-}" ]; then
   exit 1
 fi
 
-# ── Require at least one AI provider API key env var ─────────────────────────
-HAS_PROVIDER=0
-for key in ANTHROPIC_API_KEY OPENAI_API_KEY OPENROUTER_API_KEY GEMINI_API_KEY \
-           XAI_API_KEY GROQ_API_KEY MISTRAL_API_KEY CEREBRAS_API_KEY \
-           VENICE_API_KEY MOONSHOT_API_KEY KIMI_API_KEY MINIMAX_API_KEY \
-           ZAI_API_KEY AI_GATEWAY_API_KEY OPENCODE_API_KEY OPENCODE_ZEN_API_KEY \
-           SYNTHETIC_API_KEY COPILOT_GITHUB_TOKEN XIAOMI_API_KEY; do
-  [ -n "${!key:-}" ] && HAS_PROVIDER=1 && break
-done
-[ -n "${AWS_ACCESS_KEY_ID:-}" ] && [ -n "${AWS_SECRET_ACCESS_KEY:-}" ] && HAS_PROVIDER=1
-[ -n "${OLLAMA_BASE_URL:-}" ] && HAS_PROVIDER=1
-if [ "$HAS_PROVIDER" -eq 0 ]; then
-  echo "[entrypoint] ERROR: At least one AI provider API key env var is required."
-  echo "[entrypoint] Set one of: ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, etc."
-  exit 1
-fi
-
 # ── Export state/workspace dirs ───────────────────────────────────────────────
 export OPENCLAW_STATE_DIR="$STATE_DIR"
 export OPENCLAW_WORKSPACE_DIR="$WORKSPACE_DIR"
