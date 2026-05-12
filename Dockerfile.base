@@ -28,6 +28,10 @@ RUN set -eux; \
     sed -i -E 's/"openclaw"[[:space:]]*:[[:space:]]*"workspace:[^"]+"/"openclaw": "*"/g' "$f"; \
   done
 
+# Disable pnpm's minimumReleaseAge supply-chain guard so newly published
+# transitive deps (e.g. @vitest/coverage-v8) don't break the build.
+ENV npm_config_minimum_release_age=0
+
 RUN pnpm install --no-frozen-lockfile
 RUN pnpm build
 ENV OPENCLAW_PREFER_PNPM=1
