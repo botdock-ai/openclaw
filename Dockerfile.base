@@ -33,10 +33,17 @@ RUN set -eux; \
 # on older trees it was under `pnpm.minimumReleaseAge` in package.json.
 # Project-level settings outrank env vars, so patch the source files. We touch
 # both possible locations to stay forward/backward-compatible.
+# Also disable pnpm v11 `blockExoticSubdeps` (default true) — baileys'
+# subdep `libsignal` is git-hosted and would otherwise be rejected.
 RUN sed -i -E 's/^(minimumReleaseAge:)[[:space:]]*[0-9]+/\1 0/' pnpm-workspace.yaml 2>/dev/null || true; \
     sed -i -E 's/"minimumReleaseAge"[[:space:]]*:[[:space:]]*[0-9]+/"minimumReleaseAge": 0/' package.json 2>/dev/null || true; \
-    echo "[patch] minimumReleaseAge after sed:"; \
-    grep -H "minimumReleaseAge" pnpm-workspace.yaml package.json 2>/dev/null || echo "(field not present)"
+    if grep -q '^blockExoticSubdeps:' pnpm-workspace.yaml 2>/dev/null; then \
+      sed -i -E 's/^blockExoticSubdeps:.*/blockExoticSubdeps: false/' pnpm-workspace.yaml; \
+    else \
+      echo 'blockExoticSubdeps: false' >> pnpm-workspace.yaml; \
+    fi; \
+    echo '[patch] pnpm guards after patch:'; \
+    grep -HE '^(minimumReleaseAge|blockExoticSubdeps):' pnpm-workspace.yaml 2>/dev/null || echo '(no fields found)'
 
 RUN pnpm install --no-frozen-lockfile
 RUN pnpm build
