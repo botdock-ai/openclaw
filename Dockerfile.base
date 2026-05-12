@@ -28,9 +28,13 @@ RUN set -eux; \
     sed -i -E 's/"openclaw"[[:space:]]*:[[:space:]]*"workspace:[^"]+"/"openclaw": "*"/g' "$f"; \
   done
 
-# Disable pnpm's minimumReleaseAge supply-chain guard so newly published
-# transitive deps (e.g. @vitest/coverage-v8) don't break the build.
-ENV npm_config_minimum_release_age=0
+# Disable pnpm's minimumReleaseAge supply-chain guard. Upstream openclaw's
+# package.json sets `pnpm.minimumReleaseAge: 2880` (48h), which package.json
+# settings override env vars — so we zero it out in the cloned source before
+# install. Otherwise newly published transitive deps (e.g. @vitest/coverage-v8)
+# break the build during the maturity window.
+RUN sed -i -E 's/"minimumReleaseAge"[[:space:]]*:[[:space:]]*[0-9]+/"minimumReleaseAge": 0/' package.json \
+  && grep '"minimumReleaseAge"' package.json
 
 RUN pnpm install --no-frozen-lockfile
 RUN pnpm build
