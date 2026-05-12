@@ -28,13 +28,15 @@ RUN set -eux; \
     sed -i -E 's/"openclaw"[[:space:]]*:[[:space:]]*"workspace:[^"]+"/"openclaw": "*"/g' "$f"; \
   done
 
-# Disable pnpm's minimumReleaseAge supply-chain guard. Upstream openclaw's
-# package.json sets `pnpm.minimumReleaseAge: 2880` (48h), which package.json
-# settings override env vars — so we zero it out in the cloned source before
-# install. Otherwise newly published transitive deps (e.g. @vitest/coverage-v8)
-# break the build during the maturity window.
-RUN sed -i -E 's/"minimumReleaseAge"[[:space:]]*:[[:space:]]*[0-9]+/"minimumReleaseAge": 0/' package.json \
-  && grep '"minimumReleaseAge"' package.json
+# Disable pnpm's minimumReleaseAge supply-chain guard. Upstream openclaw
+# sets it to 2880 (48h); on pnpm v11 the setting lives in pnpm-workspace.yaml,
+# on older trees it was under `pnpm.minimumReleaseAge` in package.json.
+# Project-level settings outrank env vars, so patch the source files. We touch
+# both possible locations to stay forward/backward-compatible.
+RUN sed -i -E 's/^(minimumReleaseAge:)[[:space:]]*[0-9]+/\1 0/' pnpm-workspace.yaml 2>/dev/null || true; \
+    sed -i -E 's/"minimumReleaseAge"[[:space:]]*:[[:space:]]*[0-9]+/"minimumReleaseAge": 0/' package.json 2>/dev/null || true; \
+    echo "[patch] minimumReleaseAge after sed:"; \
+    grep -H "minimumReleaseAge" pnpm-workspace.yaml package.json 2>/dev/null || echo "(field not present)"
 
 RUN pnpm install --no-frozen-lockfile
 RUN pnpm build
