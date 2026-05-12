@@ -1,0 +1,53 @@
+{
+  "id": "botdock",
+  "name": "BotDock",
+  "description": "Curated BotDock model catalog (routed via BotDock Router).",
+  "version": "0.1.0",
+  "providers": ["botdock"],
+  "modelSupport": {
+    "modelPrefixes": ["botdock/"]
+  },
+  "providerAuthEnvVars": {
+    "botdock": ["BOTDOCK_API_KEY"]
+  },
+  "setup": {
+    "providers": [
+      {
+        "id": "botdock",
+        "authMethods": ["api-key"],
+        "envVars": ["BOTDOCK_API_KEY"]
+      }
+    ]
+  },
+  "providerAuthChoices": [
+    {
+      "provider": "botdock",
+      "method": "api-key",
+      "choiceId": "botdock-api-key",
+      "choiceLabel": "BotDock API key",
+      "groupId": "botdock",
+      "groupLabel": "BotDock",
+      "groupHint": "API key",
+      "optionKey": "botdockApiKey",
+      "cliFlag": "--botdock-api-key",
+      "cliOption": "--botdock-api-key <key>",
+      "cliDescription": "BotDock API key"
+    }
+  ],
+  "uiHints": {
+    "apiKey": {
+      "label": "BotDock API key",
+      "placeholder": "sk-...",
+      "sensitive": true
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  },
+  "compat": {
+    "pluginApi": ">=2026.4.14",
+    "minGatewayVersion": "2026.4.14"
+  }
+}

@@ -1,0 +1,110 @@
+services:
+  openclaw:
+    image: 'botdockai/openclaw:2026.3.11'
+    pull_policy: if_not_present
+    restart: "unless-stopped"
+    init: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 3G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    environment:
+      - SERVICE_FQDN_OPENCLAW_8080
+      - OPENCLAW_GATEWAY_TOKEN=$SERVICE_PASSWORD_64_GATEWAYTOKEN
+      - 'ORIGIN_URL=${ORIGIN_URL}'
+      - 'ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}'
+      - 'OPENAI_API_KEY=${OPENAI_API_KEY}'
+      - 'OPENROUTER_API_KEY=${OPENROUTER_API_KEY}'
+      - 'GEMINI_API_KEY=${GEMINI_API_KEY}'
+      - 'XAI_API_KEY=${XAI_API_KEY}'
+      - 'GROQ_API_KEY=${GROQ_API_KEY}'
+      - 'MISTRAL_API_KEY=${MISTRAL_API_KEY}'
+      - 'CEREBRAS_API_KEY=${CEREBRAS_API_KEY}'
+      - 'VENICE_API_KEY=${VENICE_API_KEY}'
+      - 'MOONSHOT_API_KEY=${MOONSHOT_API_KEY}'
+      - 'KIMI_API_KEY=${KIMI_API_KEY}'
+      - 'MINIMAX_API_KEY=${MINIMAX_API_KEY}'
+      - 'ZAI_API_KEY=${ZAI_API_KEY}'
+      - 'AI_GATEWAY_API_KEY=${AI_GATEWAY_API_KEY}'
+      - 'OPENCODE_API_KEY=${OPENCODE_API_KEY}'
+      - 'SYNTHETIC_API_KEY=${SYNTHETIC_API_KEY}'
+      - 'COPILOT_GITHUB_TOKEN=${COPILOT_GITHUB_TOKEN}'
+      - 'XIAOMI_API_KEY=${XIAOMI_API_KEY}'
+      - 'BOTDOCK_API_KEY=${BOTDOCK_API_KEY}'
+      - 'OPENCLAW_PRIMARY_MODEL=${OPENCLAW_PRIMARY_MODEL}'
+      - 'DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}'
+      - 'AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}'
+      - 'AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}'
+      - 'AWS_REGION=${AWS_REGION:-us-east-1}'
+      - 'AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}'
+      - 'BEDROCK_PROVIDER_FILTER=${BEDROCK_PROVIDER_FILTER:-anthropic}'
+      - 'OLLAMA_BASE_URL=${OLLAMA_BASE_URL}'
+      - OPENCLAW_GATEWAY_PORT=8080
+      - OPENCLAW_STATE_DIR=/data/.openclaw
+      - OPENCLAW_WORKSPACE_DIR=/data/workspace
+      - 'HOOKS_ENABLED=${HOOKS_ENABLED:-false}'
+      - 'HOOKS_PATH=${HOOKS_PATH:-/hooks}'
+      - 'MOONSHOT_BASE_URL=${MOONSHOT_BASE_URL:-https://api.moonshot.ai/v1}'
+      - 'KIMI_BASE_URL=${KIMI_BASE_URL:-https://api.moonshot.ai/anthropic}'
+      - TELEGRAM_BOT_TOKEN=$TELEGRAM_BOT_TOKEN
+      - DISCORD_BOT_TOKEN=$DISCORD_BOT_TOKEN
+      - SLACK_BOT_TOKEN=$SLACK_BOT_TOKEN
+      - SLACK_APP_TOKEN=$SLACK_APP_TOKEN
+      - WHATSAPP_ENABLED=$WHATSAPP_ENABLED
+    volumes:
+      - 'openclaw-data:/data'
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - '-e'
+        - "fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 20s
+      timeout: 10s
+      retries: 5
+
+  filebrowser:
+    image: filebrowser/filebrowser
+    restart: "unless-stopped"
+    user: "1000:1000"
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        mkdir -p /srv/.openclaw/.db
+        DB=/srv/.openclaw/.db/openclaw.db
+        rm -f $$DB
+        filebrowser config init -d $$DB
+        filebrowser config set -d $$DB \
+          --auth.method=proxy \
+          --auth.header=X-Remote-User \
+          --baseURL=/filebrowser \
+          --root=/srv \
+          --port=80 \
+          --address=0.0.0.0 \
+          --perm.execute=false \
+          --perm.share=false
+        filebrowser users add botdock adminadminadmin -d $$DB
+        exec filebrowser -d $$DB
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    environment:
+      - SERVICE_FQDN_FILEBROWSER_80
+    volumes:
+      - 'openclaw-data:/srv'
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://0.0.0.0:80/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3

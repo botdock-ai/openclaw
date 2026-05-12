@@ -100,6 +100,13 @@ if (config.gateway.controlUi.enabled === undefined) {
   config.gateway.controlUi.enabled = true;
 }
 
+// Control UI allowed origins: single URL from ORIGIN_URL env var → array.
+const originUrl = (process.env.ORIGIN_URL || "").trim();
+if (originUrl) {
+  config.gateway.controlUi.allowedOrigins = [originUrl];
+  console.log(`[configure] gateway.controlUi.allowedOrigins set to [${originUrl}]`);
+}
+
 // Bind address: always "lan" (0.0.0.0) — required for Docker networking.
 // Overrides any persisted config or doctor --fix defaults.
 config.gateway.bind = "lan";
@@ -612,6 +619,45 @@ if (process.env.BROWSER_CDP_URL) {
     br.defaultProfile = process.env.BROWSER_DEFAULT_PROFILE;
 } else if (config.browser) {
   console.log("[configure] browser configured (from custom JSON)");
+}
+
+// ── Bundled built-in plugins ────────────────────────────────────────────────
+// Auto-register plugins baked into /opt/openclaw/plugins/<dir>/ and enable them
+// unless plugins.entries.<id>.enabled is explicitly false in custom JSON.
+const BUNDLED_PLUGINS_DIR = "/opt/openclaw/plugins";
+try {
+  const entries = fs.readdirSync(BUNDLED_PLUGINS_DIR, { withFileTypes: true });
+  const bundled = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const pluginDir = path.join(BUNDLED_PLUGINS_DIR, entry.name);
+    const manifestPath = path.join(pluginDir, "openclaw.plugin.json");
+    if (!fs.existsSync(manifestPath)) continue;
+    try {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+      bundled.push({ id: manifest.id || entry.name, dir: pluginDir });
+    } catch {
+      console.warn(`[configure] skipping plugin ${entry.name}: invalid openclaw.plugin.json`);
+    }
+  }
+  if (bundled.length) {
+    ensure(config, "plugins");
+    if (config.plugins.enabled === undefined) config.plugins.enabled = true;
+    ensure(config, "plugins", "load");
+    const existing = new Set(config.plugins.load.paths || []);
+    const newPaths = bundled.map(p => p.dir).filter(p => !existing.has(p));
+    if (newPaths.length) {
+      config.plugins.load.paths = [...(config.plugins.load.paths || []), ...newPaths];
+    }
+    ensure(config, "plugins", "entries");
+    for (const { id } of bundled) {
+      const prev = config.plugins.entries[id] || {};
+      config.plugins.entries[id] = { ...prev, enabled: prev.enabled !== false };
+    }
+    console.log(`[configure] bundled plugins enabled: ${bundled.map(p => p.id).join(", ")}`);
+  }
+} catch {
+  // /opt/openclaw/plugins doesn't exist — fine, no bundled plugins
 }
 
 // ── Write config ────────────────────────────────────────────────────────────
